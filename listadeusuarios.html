@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" dir="ltr">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Usuários</title>
+
+    <!-- CONECTANDO FONTES -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <!-- CONECTANDO BIBLIOTECAS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- CONECTANDO O ESTILO -->
+    <link rel="stylesheet" href="assets/css/paineldeusuarios.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script>
+        var USUARIOS = []
+
+        function openModal(userId) {
+            let user = USUARIOS[userId]
+            console.log("aaaa " + user.nome)
+
+            // Preenche os dados do usuário no modal
+            document.getElementById("picProfile").src = "http://localhost:5000/static/uploads/Livros/" + user.id_usuario + ".jpeg";
+            document.getElementById("nome").value = user.nome;
+            document.getElementById("id").value = userId;
+            document.getElementById("e_mail").value = user.e_mail;
+            document.getElementById("tipo").value = user.tipo;
+            document.getElementById("ativo").value = user.ativo;
+            document.getElementById("userModal").style.display = "block";
+            document.getElementById("userModal").setAttribute("data-user-id", user.id_usuario); // Guardando ID do usuário
+        }
+
+
+        function closeModal() {
+            document.getElementById("userModal").style.display = "none";
+        }
+
+        function saveChanges() {
+            const userId = document.getElementById("userModal").getAttribute("data-user-id"); // "getAttribute" vai retornar o valor atual do atributo especificado
+            const user = USUARIOS[userId];
+
+            if (user) {
+                let tipo = document.getElementById("tipo").value;
+                let ativo = document.getElementById("ativo").value;
+
+                if (tipo < 1 || tipo > 3) {
+                    Swal.fire({
+                        title: "Erro",
+                        text: "O tipo deve ser entre 1 e 3.",
+                        icon: "error"
+                    });
+                    return;
+                }
+
+                if (ativo != 0 && ativo != 1) {
+                    Swal.fire({
+                        title: "Erro",
+                        text: "O campo 'Ativo' deve ser 0 ou 1.",
+                        icon: "error"
+                    });
+                    return;
+                }
+
+                user.nome = document.getElementById("nome").value;
+                user.e_mail = document.getElementById("e_mail").value;
+                
+                var senha = localStorage.getItem("senha")
+                document.getElementById("senha").value = senha  
+                              
+                user.tipo = tipo;
+                user.ativo = ativo;
+
+                Swal.fire({
+                    position: "top-end",
+                    icon: "success",
+                    title: "Alterações salvas com sucesso!",
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                // closeModal();
+                // updateTable();
+            }
+        }
+
+        function updateTable() {
+            var settings = {
+                "url": "http://localhost:5000/cadastro",
+
+                "method": "GET",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+            };
+
+            // Se a requisição der bom
+            $.ajax(settings).done(function (response) { // AJAX: permite que você envie ou receba dados de um servidor em segundo plano, enquanto o usuário continua interagindo com a página normalmente.
+                var dados = response
+                console.log(response)
+
+                const tbody = document.querySelector("tbody");
+                tbody.innerHTML = ""; // Limpa a tabela antes de preencher
+
+                dados.usuarios.forEach(user => {
+                    const linha = document.createElement("tr"); // nova linha na tabela
+
+                    USUARIOS[user.id_usuario] = user
+
+                    linha.innerHTML = `
+                        <td>${user.id_usuario}</td>
+                        <td>${user.nome}</td>
+                        <td>${user.e_mail}</td>
+                        <td>
+                            <button class="editBtn" onclick="openModal(${user.id_usuario})">
+                                <svg height="1em" viewBox="0 0 512 512">
+                                <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231z"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(linha); // adiciona a tal da linha
+                });
+
+            });
+
+
+
+        }
+
+        document.addEventListener("DOMContentLoaded", updateTable); // Preencher a tabela ao carregar a página
+
+        $(document).ready(function () {
+            window.onload = function () {
+                let token = localStorage.getItem("token");
+                let tipo = localStorage.getItem("tipo");
+
+                if (!token || tipo != 1) { // Se não tiver token ou não for do tipo 1 (admin)
+                    Swal.fire({
+                        title: "Erro",
+                        text: "Você não pode acessar essa página!",
+                        icon: "error",
+                        confirmButtonText: "OK"
+                    }).then(() => {
+                        window.location.href = "login.html";
+                    });
+                }
+            };
+        });
+
+    </script>
+
+</head>
+
+<body>
+    <!-- início >> cabeçalho -->
+    <header class="d-flex pt-3 align-items-center justify-content-center">
+        <img class="logo1" src="assets/img/logo.png" alt="Logo da fundação 'Doe Aí'.">
+        <div class="group">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                <g>
+                    <path
+                        d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                    </path>
+                </g>
+            </svg>
+            <input id="query" class="input" type="search" placeholder="Busque por ONGs..." name="searchbar" />
+        </div>
+        <nav>
+            <div>
+                <a href="landing-page.html" class="text-nav">
+                    PÁGINA INICIAL
+                </a>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <main>
+            <h1 class="titulo">Informações de Usuários</h1>
+            <div class="container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody> <!-- Tabela será preenchida dinamicamente -->
+                </table>
+            </div>
+        </main>
+
+        <div id="userModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" onclick="closeModal()">&times;</span>
+                    <!-- &times é o X que é usado para fechar modais -->
+                    <h2>Editar Usuário</h2>
+                </div>
+                <div class="modal-body">
+                    <form id="formCadastroUsuario" enctype="multipart/form-data">
+                        <img id="picProfile" src="" alt="Imagem do Perfil">
+                        <input type="file" id="imagem" name="imagem" accept="image/*">
+                        <input type="hidden" name="id" id="id">
+                        </br>
+                        <label for="nome">Nome:</label>
+                        <input name="nome" id="nome" type="text">
+                        <label for="e_mail">E-mail:</label>
+                        <input name="e_mail" id="e_mail" type="email">
+
+                        <label for="senha">Senha:</label>
+                        <input name="senha" id="senha" type="password" placeholder="Insira uma nova senha ou repita a senha anterior.">
+
+                        <label for="tipo">Tipo:</label>
+                        <input name="tipo" id="tipo" type="number" min="1" max="3" step="1">
+                        <label for="ativo">Ativo:</label>
+                        <input name="ativo" id="ativo" type="number" min="0" max="1" step="1">
+
+                        <button type="button" id="btn" class="btn-save2">Excluir</button>
+                        <button class="btn-save" type="submit">Salvar</button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+</body>
+<footer>
+    <div class="container-fluid">
+        <div class="row">
+
+            <div class="col-md-3 text-center">
+                <img class="logo2 tam" src="assets/img/logo.png" alt="Logo da fundação 'Doe Aí'.">
+            </div>
+
+            <div class="col-md-2 col-6 text-center margin">
+                <h5 class="pb-2 tam2">TELEFONE</h5>
+                <h6>(18) 99120-3762</h6>
+            </div>
+
+            <div class="col-md-2 col-6 text-center margin">
+                <h5 class="pb-2 tam2">SOBRE NÓS</h5>
+                <h6>• ONGs</h6>
+                <h6 class="p-t">• Doações</h6>
+            </div>
+
+            <div class="col-md-5 text-center">
+                <h5 class="pb-2 tam2">NOS ACOMPANHE</h5>
+                <div class="space">
+                    <img class="imgfooter" src="assets/img/facebook.png" alt="Logo do Facebook.">
+                    <img class="imgfooter" src="assets/img/instagram.png" alt="Logo do Instagram.">
+                    <img class="imgfooter alt" src="assets/img/youtube.png" alt="Logo do Youtube.">
+                    <img class="imgfooter" src="assets/img/tik tok.png" alt="Logo do Tik Tok.">
+                </div>
+            </div>
+
+            <div class="col-md-12 azul text-center">
+                <h5 class="tam3">© 2025. Todos os direitos reservados.</h5>
+            </div>
+        </div>
+    </div>
+</footer>
+<!-- end >> rodapé -->
+</body>
+
+
+<script>
+
+document.getElementById("formCadastroUsuario").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            var token = localStorage.getItem("token");
+            
+            // Pega o que o usuario preencheu 
+            let dados = new FormData(this);
+            let id = dados.get("id")
+
+            // Verifica se o arquivo foi selecionado
+            var fileInput = document.querySelector('input[type="file"]');
+            if (!fileInput || !fileInput.files[0]) {
+                Swal.fire({
+                    title: "Erro!",
+                    text: "Por favor, selecione uma imagem de tipo 'png' ou 'jpg/jpeg' para enviar.",
+                    icon: "error"
+                });
+                return;
+            }
+
+            const myHeaders = new Headers();
+            myHeaders.append("Authorization", "Bearer " + token);
+
+            const formdata = new FormData();
+            formdata.append("imagem", fileInput.files[0], fileInput.files[0].name); // Usa o nome original do arquivo
+
+            const requestOptions = {
+                method: "PUT",
+                headers: myHeaders,
+                body: formdata,
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:5000/imagem/" + id, requestOptions) //Request Options: é um objeto de opções sobre a requisição (POST, GET, etc.)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Erro na requisição: " + response.statusText);
+                    }
+                    return response.json(); // Assumindo que a API retorna JSON
+                })
+                .then((result) => console.log(result))
+                .catch((error) => console.error("Erro:", error));
+
+
+            if (!id) {
+                Swal.fire({
+                    title: "Erro!",
+                    text: "Usuário não encontrado",
+                    icon: "error"
+                });
+                return;
+            }
+
+            let edita = {
+                nome: dados.get("nome"),
+                e_mail: dados.get("e_mail"),
+                senha: dados.get("senha"),
+                tipo: dados.get("tipo"),
+                ativo: dados.get("ativo")
+            }
+
+            if(dados.get("senha") === null || dados.get("senha") === "" || dados.get("senha") === undefined) {
+                Swal.fire({
+                    title: "Opa...",
+                    text: "Informe a senha",
+                    icon: "error"
+                });
+
+                return;
+            }
+
+            edita = JSON.stringify(edita)
+
+            // Faz a requisição para atualizar os dados do usuário
+            $.ajax({
+                method: "PUT",
+
+                url: "http://10.92.3.169:5000/cadastro/" + id,
+
+                data: edita,
+
+                contentType: "application/json",
+
+                success: function (retorno) {
+                    Swal.fire({
+                        title: "Sucesso!",
+                        text: "Suas informações foram atualizadas com sucesso!",
+                        icon: "success"
+                    });
+                    console.log(retorno)
+                },
+
+                error: function (retorno) {
+                    Swal.fire({
+                        title: "Opa...",
+                        text: retorno.responseJSON.error,
+                        icon: "error"
+                    });
+                    console.log(retorno)
+                }
+            })
+        });
+
+        $("#btn").on("click", function () {        
+        Swal.fire({
+            title: "Você deseja excluir mesmo seu perfil?",
+            text: "Excluindo seu perfil, você será inativado e precisará realizar o cadastro novamente.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Excluir",
+            cancelButtonText: "Cancelar"
+        }).then((result) => {
+
+        if (result.isConfirmed) {
+            
+            let email = localStorage.getItem("e_mail");
+            var id = document.getElementById("id").value;
+            $.ajax({
+                url: "http://10.92.3.169:5000/cadastro/" + id, 
+                type: "DELETE", 
+                contentType: "application/json",
+                data: JSON.stringify({ "email": email }),
+                success: function (response) {
+                    localStorage.removeItem("nome");
+                    localStorage.removeItem("e_mail");
+                    localStorage.removeItem("senha");
+
+                    Swal.fire(
+                        "Excluído!",
+                        "Seu perfil foi excluído com sucesso.",
+                        "success"
+                    );
+
+                    setTimeout(() => {
+                        window.location.href = "listadeusuarios.html";
+                    }, 2000);
+                },
+                error: function (xhr, status, error) {
+                    Swal.fire(
+                        "Erro!",
+                        "Houve um problema ao excluir seu perfil. Tente novamente.",
+                        "error"
+                    );
+                    console.error("Erro na exclusão:", xhr.responseText);
+                }
+            });
+        }
+    });
+});
+
+</script>
+
+</html>
